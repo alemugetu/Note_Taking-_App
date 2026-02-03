@@ -1,0 +1,78 @@
+.card {
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: box-shadow 0.3s ease;
+    padding: 16px;
+    background-color: #fff;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    height: 100%;
+    border: 1px solid #dee2e6;
+}
+
+.card:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    text-decoration: none;
+    color: inherit;
+    transform: translateY(-2px);
+}
+
+.card:focus {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    outline: 2px solid #007bff;
+    outline-offset: 2px;
+    text-decoration: none;
+    color: inherit;
+}
+
+.cardBody {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 0.5rem;
+    padding: 1rem;
+}
+
+.cardTitle {
+    font-size: 1.25rem;
+    font-weight: 500;
+    text-align: center;
+    margin-bottom: 0.5rem;
+    color: #212529;
+}
+
+.tagContainer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    justify-content: center;
+    margin-top: 0.5rem;
+}
+
+.tag {
+    background-color: #007bff;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    border: none;
+}
+
+/* Additional styling for the form */
+.form-section {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.create-button {
+    min-width: 100px;
+}

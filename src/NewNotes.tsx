@@ -11,7 +11,8 @@ export function NewNotes({ onSubmit, onAddTag, availableTags  }: NewNotesProps){
     return (
 <>
         <h1 className="mb-4">New notes</h1>
-        <NoteForm onSubmit={onSubmit} onAddTag={onAddTag} 
+        <NoteForm 
+        onSubmit={onSubmit} onAddTag={onAddTag} 
         availableTags={availableTags}
         />
 
