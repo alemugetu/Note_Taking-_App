@@ -48,7 +48,7 @@ export function Note({ onDelete }: NoteProps) {
                     </Stack>
                 </Col>
             </Row>
-            <ReactMarkdown>{note.markdown}</ReactMarkdown>
+            <div dangerouslySetInnerHTML={{ __html: note.content }} />
         </>
     )
 }

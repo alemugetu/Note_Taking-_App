@@ -123,15 +123,22 @@ export function NoteList({ availableTags, notes, onUpdateTag, onDeleteTag }: Not
             </Form>
             
             <Row xs={1} sm={2} lg={3} xl={4} className="g-3">
-                {filteredNotes.map(note => (
-                    <Col key={note.id}>
-                        <NoteCard 
-                            id={note.id}
-                            title={note.title}
-                            tags={note.tags}
-                        />
+                {filteredNotes.length > 0 ? (
+                    filteredNotes.map(note => (
+                        <Col key={note.id}>
+                            <NoteCard 
+                                id={note.id}
+                                title={note.title}
+                                tags={note.tags}
+                            />
+                        </Col>
+                    ))
+                ) : (
+                    <Col xs={12} className="text-center mt-5">
+                        <h3 className="text-muted">No notes found</h3>
+                        <p className="text-muted">Try changing your search or create a new note!</p>
                     </Col>
-                ))}
+                )}
             </Row>
             <EditTagsModal
             onUpdateTag={onUpdateTag}
