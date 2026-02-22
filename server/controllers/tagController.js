@@ -5,7 +5,14 @@ import Tag from '../models/Tag.js';
 // @access  Private
 export const getTags = async (req, res, next) => {
   try {
-    const tags = await Tag.find({ user: req.user._id });
+    const { q, limit } = req.query;
+    const query = { user: req.user._id };
+    if (q) {
+      // case-insensitive prefix/contains search
+      query.name = { $regex: q, $options: 'i' };
+    }
+    const max = Math.min(Number(limit) || 10, 100);
+    const tags = await Tag.find(query).limit(max);
 
     res.status(200).json({
       success: true,

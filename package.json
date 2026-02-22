@@ -15,8 +15,11 @@
     "@types/lodash.debounce": "^4.0.9",
     "@types/uuid": "^10.0.0",
     "axios": "^1.13.5",
+    "bcryptjs": "^3.0.3",
     "bootstrap": "^5.3.8",
+    "cloudinary": "^2.9.0",
     "express-session": "^1.19.0",
+    "json": "^11.0.0",
     "lodash.debounce": "^4.0.8",
     "mongodb": "^7.1.0",
     "mongoose": "^9.1.6",
@@ -27,7 +30,9 @@
     "react-quill-new": "^3.8.3",
     "react-router-dom": "^7.13.0",
     "react-select": "^5.10.2",
-    "uuid": "^13.0.0"
+    "token": "^0.1.0",
+    "uuid": "^13.0.0",
+    "web": "^0.0.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

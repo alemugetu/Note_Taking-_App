@@ -5,12 +5,17 @@ import {
   createNote,
   updateNote,
   deleteNote,
+  removeAttachment,
+  getSharedNote,
 } from '../controllers/noteController.js';
 import { protect } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// All routes are protected
+// Public routes
+router.get('/shared/:id', getSharedNote);
+
+// All subsequent routes are protected
 router.use(protect);
 
 router.route('/')
@@ -21,5 +26,8 @@ router.route('/:id')
   .get(getNote)
   .put(updateNote)
   .delete(deleteNote);
+
+router.route('/:id/attachments/:publicId')
+  .delete(removeAttachment);
 
 export default router;

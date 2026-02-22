@@ -1,9 +1,11 @@
 
-import { useRef, useState, type FormEvent, useEffect, useCallback } from "react";
+import { useRef, useState, type FormEvent, useEffect, useCallback, useMemo } from "react";
 import { Row, Stack, Col, Form, Button } from "react-bootstrap";
 import { Link, useNavigate } from "react-router-dom";
 import CreateableReactSelect from "react-select/creatable"
 import type { NoteData, Tag } from "./App";
+import { tagsApi } from "./api";
+import { uploadsApi } from "./api";
 import { v4 as uuidv4 } from "uuid";
 import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
@@ -63,11 +65,20 @@ type NoteFormProps = {
     id?: string
 } & Partial<NoteData>
 
-export function NoteForm({ onSubmit, onAddTag, availableTags, title = "", content = "", tags = [], id }: NoteFormProps) {
+export function NoteForm({ onSubmit, onAddTag, availableTags, title = "", content = "", tags = [], id, color = '#ffffff', attachments = [], reminder }: NoteFormProps) {
     const [currentTitle, setCurrentTitle] = useState(title)
     const [currentContent, setCurrentContent] = useState(content)
     const [selectedTags, setSelectedTags] = useState<Tag[]>(tags)
+    const [tagOptions, setTagOptions] = useState<{ label: string; value: string }[]>(availableTags.map(t => ({ label: t.label, value: t.id })))
+    const [currentColor, setCurrentColor] = useState<string>(color)
     const [isSaving, setIsSaving] = useState(false)
+    const [attachmentsState, setAttachmentsState] = useState<Array<any>>(attachments || [])
+    const [reminderDate, setReminderDate] = useState<string | ''>("")
+    const [reminderTime, setReminderTime] = useState<string | ''>("")
+    const quillRef = useRef<any>(null)
+    const [uploading, setUploading] = useState(false)
+    const onSubmitRef = useRef(onSubmit)
+    const lastSavedSnapshotRef = useRef<string>("")
 
     const navigate = useNavigate()
 
@@ -76,38 +87,147 @@ export function NoteForm({ onSubmit, onAddTag, availableTags, title = "", conten
         setTimeout(addToolbarTooltips, 100);
     }, []);
 
+    // Keep latest onSubmit without recreating debounced function
+    useEffect(() => {
+        onSubmitRef.current = onSubmit
+    }, [onSubmit])
+
+    // Initialize local state when switching to a different note (id changes)
+    useEffect(() => {
+        setCurrentTitle(title)
+        setCurrentContent(content)
+        setSelectedTags(tags)
+        setCurrentColor(color)
+        setAttachmentsState(attachments || [])
+
+        // initialize reminder inputs from prop
+        if (reminder && (reminder as any).date) {
+            try {
+                const d = new Date((reminder as any).date)
+                setReminderDate(d.toISOString().slice(0,10))
+                setReminderTime(d.toTimeString().slice(0,5))
+            } catch (e) {
+                setReminderDate("")
+                setReminderTime("")
+            }
+        } else {
+            setReminderDate("")
+            setReminderTime("")
+        }
+
+        // set the "last saved" snapshot to what we just loaded
+        const initialSnapshot = JSON.stringify({
+            title,
+            content,
+            tags: (tags || []).map(t => t.id).sort(),
+            color,
+            attachments: (attachments || []).map((a: any) => ({
+                url: a?.url,
+                publicId: a?.publicId || a?.public_id || a?.publicid,
+                filename: a?.filename,
+                fileType: a?.fileType,
+                size: a?.size,
+            })).sort((a: any, b: any) => String(a.publicId || a.url || '').localeCompare(String(b.publicId || b.url || ''))),
+            reminder: (reminder && (reminder as any).date) ? { date: (reminder as any).date } : null,
+        })
+        lastSavedSnapshotRef.current = initialSnapshot
+    }, [id])
+
     // Auto-save function
-    const debouncedSave = useCallback(
-        debounce((data: NoteData) => {
-            console.log("Auto-saving...", data)
-            onSubmit(data)
-            setIsSaving(false)
-        }, 2000),
-        [onSubmit]
+    const debouncedSave = useMemo(() => {
+        return debounce(async (data: NoteData, snapshot: string) => {
+            try {
+                await onSubmitRef.current(data)
+                lastSavedSnapshotRef.current = snapshot
+            } catch (e) {
+                console.error('Auto-save failed', e)
+            } finally {
+                setIsSaving(false)
+            }
+        }, 2000)
+    }, [])
+
+    const fetchTagSuggestions = useCallback(
+        debounce(async (q: string) => {
+            try {
+                const res = await tagsApi.search(q, 10)
+                const items = (res.data.data || []).map((t: any) => ({ label: t.name, value: t._id }))
+                setTagOptions(prev => {
+                    const map = new Map(prev.map(p => [p.value, p]))
+                    items.forEach((it: any) => map.set(it.value, it))
+                    return Array.from(map.values())
+                })
+            } catch (e) {
+                // ignore
+            }
+        }, 300),
+        []
     )
 
     useEffect(() => {
+        // keep tag options in sync with prop
+        setTagOptions(availableTags.map(t => ({ label: t.label, value: t.id })))
+    }, [availableTags])
+
+    useEffect(() => {
         // Trigger auto-save only if we have an id (edit mode)
-        if (id && (currentTitle !== title || currentContent !== content || selectedTags !== tags)) {
+        if (!id) return
+
+        const reminderPayload = reminderDate
+            ? { date: (reminderDate + 'T' + (reminderTime || '00:00') + ':00.000Z'), notified: false }
+            : null
+
+        const normalizedAttachments = (attachmentsState || []).map((a: any) => ({
+            url: a?.url,
+            publicId: a?.publicId || a?.public_id || a?.publicid,
+            filename: a?.filename,
+            fileType: a?.fileType,
+            size: a?.size,
+        })).sort((a: any, b: any) => String(a.publicId || a.url || '').localeCompare(String(b.publicId || b.url || '')))
+
+        const snapshot = JSON.stringify({
+            title: currentTitle,
+            content: currentContent,
+            tags: (selectedTags || []).map(t => t.id).sort(),
+            color: currentColor,
+            attachments: normalizedAttachments,
+            reminder: reminderPayload ? { date: reminderPayload.date } : null,
+        })
+
+        if (snapshot !== lastSavedSnapshotRef.current) {
             setIsSaving(true)
             debouncedSave({
                 title: currentTitle,
                 content: currentContent,
-                tags: selectedTags
-            })
+                tags: selectedTags,
+                color: currentColor,
+                attachments: attachmentsState,
+                reminder: reminderPayload
+            }, snapshot)
         }
+
         return () => debouncedSave.cancel()
-    }, [id, currentTitle, currentContent, selectedTags, debouncedSave])
+    }, [id, currentTitle, currentContent, selectedTags, currentColor, attachmentsState, reminderDate, reminderTime, debouncedSave])
+
+    useEffect(() => {
+        return () => {
+            fetchTagSuggestions.cancel()
+        }
+    }, [fetchTagSuggestions])
 
     async function handleSubmit(e: FormEvent<HTMLFormElement>) {
         e.preventDefault()
         
         try {
             setIsSaving(true)
+            const reminderPayload = reminderDate ? { date: (reminderDate + 'T' + (reminderTime || '00:00') + ':00.000Z'), notified: false } : null
             await onSubmit({
                 title: currentTitle,
                 content: currentContent,
-                tags: selectedTags
+                tags: selectedTags,
+                color: currentColor,
+                attachments: attachmentsState,
+                reminder: reminderPayload
             })
             setIsSaving(false)
             navigate("/") 
@@ -164,10 +284,12 @@ export function NoteForm({ onSubmit, onAddTag, availableTags, title = "", conten
                                     label: tag.label, 
                                     value: tag.id
                                 }))}
-                                options={availableTags.map(tag => ({
-                                    label: tag.label, 
-                                    value: tag.id
-                                }))}
+                                options={tagOptions}
+                                onInputChange={(input) => {
+                                    if (!input) return input
+                                    fetchTagSuggestions(input)
+                                    return input
+                                }}
                                 onChange={tags => {
                                     setSelectedTags(tags.map(tag => ({
                                         label: tag.label, 
@@ -178,10 +300,83 @@ export function NoteForm({ onSubmit, onAddTag, availableTags, title = "", conten
                             />
                         </Form.Group>
                     </Col>
+                    <Col xs="auto" className="d-flex align-items-end">
+                        <Form.Group controlId="color">
+                            <Form.Label>Color</Form.Label>
+                            <div>
+                                <Form.Control 
+                                    type="color"
+                                    value={currentColor}
+                                    onChange={e => setCurrentColor(e.target.value)}
+                                    style={{ width: '48px', height: '36px', padding: 0 }}
+                                />
+                            </div>
+                        </Form.Group>
+                    </Col>
+                    <Col xs="auto" className="d-flex align-items-end">
+                        <Form.Group controlId="reminderDate">
+                            <Form.Label>Reminder Date</Form.Label>
+                            <Form.Control type="date" value={reminderDate} onChange={e => setReminderDate(e.target.value)} />
+                        </Form.Group>
+                    </Col>
+                    <Col xs="auto" className="d-flex align-items-end">
+                        <Form.Group controlId="reminderTime">
+                            <Form.Label>Reminder Time</Form.Label>
+                            <Form.Control type="time" value={reminderTime} onChange={e => setReminderTime(e.target.value)} />
+                        </Form.Group>
+                    </Col>
                 </Row>
                 <Form.Group controlId="content">
                     <Form.Label>Body {isSaving && <span className="text-muted ms-2" style={{ fontSize: '0.8rem' }}>(Saving...)</span>}</Form.Label>
+                            <div style={{ marginBottom: 8 }}>
+                        <input type="file" accept="image/*,video/*,application/pdf" onChange={async (e) => {
+                            const file = e.target.files && e.target.files[0]
+                            if (!file) return
+                            try {
+                                setUploading(true)
+                                const fd = new FormData()
+                                fd.append('file', file)
+                                const res = await uploadsApi.uploadFile(fd)
+                                        const url = res.data?.data?.url
+                                        const publicId = res.data?.data?.public_id || res.data?.data?.publicId
+                                        const filename = file.name
+                                        const fileType = file.type
+                                        const size = file.size
+                                        if (url && quillRef.current) {
+                                            const editor = quillRef.current.getEditor()
+                                            const range = editor.getSelection(true) || { index: editor.getLength() }
+                                            // insert appropriate embed (images for now)
+                                            if (file.type.startsWith('image/')) editor.insertEmbed(range.index, 'image', url)
+                                            else editor.insertText(range.index, url)
+                                            // update content state from editor
+                                            setCurrentContent(editor.root.innerHTML)
+                                        }
+                                        // record attachment metadata locally so it will be submitted with the note
+                                        const newAttachment = { url, publicId, filename, fileType, size }
+                                        setAttachmentsState(prev => [newAttachment, ...prev])
+                            } catch (err) {
+                                console.error('Upload failed', err)
+                                alert('Upload failed')
+                            } finally { setUploading(false); if (e.currentTarget) e.currentTarget.value = '' }
+                        }} />
+                        {uploading && <div className="text-muted">Uploading...</div>}
+                    </div>
+                            {attachmentsState.length > 0 && (
+                                <div className="mb-2">
+                                    <strong>Attachments</strong>
+                                    <div className="d-flex flex-wrap" style={{ gap: 8, marginTop: 8 }}>
+                                        {attachmentsState.map((a, i) => (
+                                            <div key={i} style={{ border: '1px solid #eee', padding: 8, borderRadius: 6 }}>
+                                                <div style={{ fontSize: '0.85rem' }}>{a.filename || a.url}</div>
+                                                <div style={{ fontSize: '0.75rem', color: '#666' }}>{(a.size || 0) > 0 ? `${Math.round((a.size/1024))} KB` : ''}</div>
+                                                <div className="mt-1"><button type="button" className="btn btn-sm btn-outline-danger" onClick={() => setAttachmentsState(prev => prev.filter((_, idx) => idx !== i))}>Remove</button></div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                     <ReactQuill 
+                        ref={quillRef}
                         theme="snow"
                         value={currentContent}
                         onChange={setCurrentContent}

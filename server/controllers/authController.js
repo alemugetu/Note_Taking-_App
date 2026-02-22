@@ -8,15 +8,18 @@ import ErrorHandler from '../utils/errorHandler.js';
 export const register = async (req, res, next) => {
   try {
     const { email, password, name } = req.body;
+    console.log(`[AUTH] Register attempt for: ${email}`);
 
     // Validation
     if (!email || !password) {
+      console.log('[AUTH] Missing email or password');
       return next(new ErrorHandler('Please provide email and password', 400));
     }
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
+      console.log(`[AUTH] User already exists: ${email}`);
       return next(new ErrorHandler('User already exists with this email', 400));
     }
 
@@ -32,6 +35,8 @@ export const register = async (req, res, next) => {
       },
     });
 
+    console.log(`[AUTH] User created: ${user._id}`);
+
     // Generate token
     const token = generateToken(user._id);
 
@@ -42,6 +47,7 @@ export const register = async (req, res, next) => {
       user: user.getPublicProfile(),
     });
   } catch (error) {
+    console.error('[AUTH] Register error:', error);
     next(error);
   }
 };
@@ -52,9 +58,11 @@ export const register = async (req, res, next) => {
 export const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
+    console.log(`[AUTH] Login attempt for: ${email}`);
 
     // Validation
     if (!email || !password) {
+      console.log('[AUTH] Missing email or password');
       return next(new ErrorHandler('Please provide email and password', 400));
     }
 
@@ -62,6 +70,7 @@ export const login = async (req, res, next) => {
     const user = await User.findOne({ email }).select('+password');
 
     if (!user) {
+      console.log(`[AUTH] User not found: ${email}`);
       return next(new ErrorHandler('Invalid email or password', 401));
     }
 
@@ -69,11 +78,13 @@ export const login = async (req, res, next) => {
     const isPasswordMatch = user.comparePassword(password);
 
     if (!isPasswordMatch) {
+      console.log(`[AUTH] Password mismatch for: ${email}`);
       return next(new ErrorHandler('Invalid email or password', 401));
     }
 
     // Generate token
     const token = generateToken(user._id);
+    console.log(`[AUTH] Login successful for: ${email}`);
 
     res.status(200).json({
       success: true,
@@ -82,6 +93,7 @@ export const login = async (req, res, next) => {
       user: user.getPublicProfile(),
     });
   } catch (error) {
+    console.error('[AUTH] Login error:', error);
     next(error);
   }
 };
@@ -165,7 +177,7 @@ export const changePassword = async (req, res, next) => {
 
     // Hash new password manually
     const hashedPassword = User.hashPassword(newPassword);
-    
+
     // Update password directly (no pre-save hook)
     user.password = hashedPassword;
     await user.save();
