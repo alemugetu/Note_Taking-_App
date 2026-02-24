@@ -12,8 +12,12 @@ type NoteCardProps = {
     title: string
     tags: Tag[]
     color?: string
+    createdAt?: string
+    preview?: string
     onPinToggle?: (id: string) => void
     onDuplicate?: (id: string) => void
+    isFavorite?: boolean
+    onToggleFavorite?: (id: string) => void
     wordCount?: number
     selected?: boolean
     onSelectToggle?: (id: string) => void
@@ -80,35 +84,55 @@ const NotebookTree: FC<{ notebooks: Notebook[]; onUpdate?: (id: string, data: an
 }
 
 
-function NoteCard({ id, title, tags, color, onPinToggle, onDuplicate, wordCount, selected = false, onSelectToggle }: NoteCardProps) {
+function NoteCard({ id, title, tags, color, createdAt, preview, onPinToggle, onDuplicate, isFavorite, onToggleFavorite, wordCount, selected = false, onSelectToggle }: NoteCardProps) {
+    function formatDate(d?: string) {
+        if (!d) return ''
+        try { return new Date(d).toLocaleDateString() } catch { return d }
+    }
+
     return (
         <Card
             as={Link}
             to={`/${id}`}
-            className="card h-100 text-reset text-decoration-none"
+            className="note-card h-100 text-reset text-decoration-none"
             style={{ borderLeft: `6px solid ${color || '#ffffff'}` }}
         >
-            <Card.Body className="cardBody">
+            <Card.Body className="note-card-body">
                 <div className="d-flex justify-content-between align-items-start">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                         <input
                             type="checkbox"
                             checked={selected}
                             onChange={() => { }}
                             onClick={e => { e.preventDefault(); e.stopPropagation(); onSelectToggle && onSelectToggle(id) }}
                         />
-                        <span className="cardTitle">{title}</span>
+                        <span className="note-card-title text-truncate">{title}</span>
                     </div>
-                    <div style={{ display: 'flex', gap: 8 }}>
+                    <div className="note-card-actions">
                         {onPinToggle && (
                             <Button size="sm" variant="outline-secondary" onClick={e => { e.preventDefault(); e.stopPropagation(); onPinToggle(id) }}>Pin</Button>
                         )}
                         {onDuplicate && (
                             <Button size="sm" variant="outline-secondary" onClick={e => { e.preventDefault(); e.stopPropagation(); onDuplicate(id) }}>Duplicate</Button>
                         )}
+                        {onToggleFavorite && (
+                            <Button
+                                size="sm"
+                                variant={isFavorite ? "warning" : "outline-secondary"}
+                                onClick={e => { e.preventDefault(); e.stopPropagation(); onToggleFavorite(id) }}
+                            >
+                                {isFavorite ? "Unfavorite" : "Favorite"}
+                            </Button>
+                        )}
                     </div>
                 </div>
-                <div className="text-muted mt-2" style={{ fontSize: '0.85rem' }}>{wordCount ?? 0} words</div>
+                <div className="mt-2 note-preview-text">
+                    {preview}
+                </div>
+                <div className="text-muted mt-2" style={{ fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>{wordCount ?? 0} words</span>
+                    <span>{formatDate(createdAt)}</span>
+                </div>
                 {tags.length > 0 && (
                     <div className="tagContainer">
                         {tags.map(tag => (
@@ -136,10 +160,13 @@ type NoteListProps = {
     onUpdateNotebook?: (id: string, data: any) => void
     onDeleteNotebook?: (id: string) => void
     onSearch?: (params: any) => void
+    extraSearchParams?: any
     onNoteUpdated?: (id: string, updated: any) => void
+    favoriteIds?: string[]
+    onToggleFavorite?: (id: string) => void
 }
 
-export function NoteList({ availableTags, notes, onUpdateTag, onDeleteTag, onPinToggle, onDuplicate, notebooks = [], onCreateNotebook, onUpdateNotebook, onDeleteNotebook, onSearch }: NoteListProps) {
+export function NoteList({ availableTags, notes, onUpdateTag, onDeleteTag, onPinToggle, onDuplicate, notebooks = [], onCreateNotebook, onUpdateNotebook, onDeleteNotebook, onSearch, extraSearchParams, favoriteIds = [], onToggleFavorite }: NoteListProps) {
     const [selectedTags, setSelectedTags] = useState<Tag[]>([])
     const [selectedColors, setSelectedColors] = useState<string[]>([])
     const [selectedNoteIds, setSelectedNoteIds] = useState<string[]>([])
@@ -166,7 +193,20 @@ export function NoteList({ availableTags, notes, onUpdateTag, onDeleteTag, onPin
             return words.length
         }
 
-        let list = notes.map(note => ({ ...note, wordCount: countWordsFromHtml(note.content || '') }))
+        const buildPreviewFromHtml = (html: string) => {
+            const tmp = document.createElement('div')
+            tmp.innerHTML = html || ''
+            const text = (tmp.textContent || tmp.innerText || '').trim()
+            if (!text) return ''
+            if (text.length <= 120) return text
+            return text.slice(0, 117) + '...'
+        }
+
+        let list = notes.map(note => ({
+            ...note,
+            wordCount: countWordsFromHtml(note.content || ''),
+            preview: buildPreviewFromHtml(note.content || '')
+        }))
 
         if (selectedNotebook) {
             list = list.filter(n => (n.notebook && n.notebook.id === selectedNotebook))
@@ -213,7 +253,7 @@ export function NoteList({ availableTags, notes, onUpdateTag, onDeleteTag, onPin
         if (dateFrom) params.dateFrom = dateFrom
         if (dateTo) params.dateTo = dateTo
         if (sortBy) params.sort = sortBy === 'newest' ? 'updatedDesc' : sortBy === 'oldest' ? 'createdAsc' : sortBy === 'mostWords' ? 'updatedDesc' : 'updatedAsc'
-        onSearch(params)
+        onSearch({ ...params, ...(extraSearchParams || {}) })
     }
 
     // Saved searches: persist simple filter objects to localStorage
@@ -292,7 +332,7 @@ export function NoteList({ availableTags, notes, onUpdateTag, onDeleteTag, onPin
             if (p.pinned) serverParams.pinned = p.pinned
             if (p.dateFrom) serverParams.dateFrom = p.dateFrom
             if (p.dateTo) serverParams.dateTo = p.dateTo
-            onSearch(serverParams)
+            onSearch({ ...serverParams, ...(extraSearchParams || {}) })
         }
     }
 
@@ -514,8 +554,8 @@ export function NoteList({ availableTags, notes, onUpdateTag, onDeleteTag, onPin
                         <div>
                             <Form.Label>&nbsp;</Form.Label>
                             <div className="d-flex" style={{ gap: 8 }}>
-                                <Button onClick={() => triggerServerSearch()} variant="outline-primary">Search</Button>
-                                <Button onClick={() => { setTitle(''); setSelectedTags([]); setSelectedColors([]); setSelectedNotebook(''); setMinWords(''); setSortBy('newest'); setPinnedOnly('any'); setDateFrom(''); setDateTo(''); setSelectedSavedSearchId(''); if (onSearch) onSearch({}) }} variant="outline-secondary">Reset</Button>
+                                <Button onClick={() => triggerServerSearch()} variant="outline-primary">Apply Filters</Button>
+                                <Button onClick={() => { setTitle(''); setSelectedTags([]); setSelectedColors([]); setSelectedNotebook(''); setMinWords(''); setSortBy('newest'); setPinnedOnly('any'); setDateFrom(''); setDateTo(''); setSelectedSavedSearchId(''); if (onSearch) onSearch(extraSearchParams || {}) }} variant="outline-secondary">Reset</Button>
                             </div>
                             <div className="mt-2 d-flex" style={{ gap: 8, alignItems: 'center' }}>
                                 <Form.Select value={selectedSavedSearchId} onChange={e => setSelectedSavedSearchId(e.target.value)} style={{ width: 200 }}>
@@ -557,8 +597,12 @@ export function NoteList({ availableTags, notes, onUpdateTag, onDeleteTag, onPin
                                 title={note.title}
                                 tags={note.tags}
                                 color={note.color}
+                                createdAt={note.createdAt}
+                                preview={note.preview}
                                 onPinToggle={onPinToggle}
                                 onDuplicate={onDuplicate}
+                                isFavorite={favoriteIds.includes(note.id)}
+                                onToggleFavorite={onToggleFavorite}
                                 selected={selectedNoteIds.includes(note.id)}
                                 onSelectToggle={(id) => setSelectedNoteIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])}
                                 wordCount={note.wordCount}

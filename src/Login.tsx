@@ -64,9 +64,13 @@ export function Login() {
                             />
                         </Form.Group>
 
-                        <Button variant="primary" type="submit" className="w-100 mb-3" disabled={isLoading}>
+                        <Button variant="primary" type="submit" className="w-100 mb-2" disabled={isLoading}>
                             {isLoading ? <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" /> : 'Log In'}
                         </Button>
+
+                        <div className="text-center">
+                            <small><Link to="/forgot-password" className="text-muted">Forgot Password?</Link></small>
+                        </div>
                     </Form>
 
                     <div className="text-center mt-3">

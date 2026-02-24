@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { pushApi } from './api';
 
 export function Settings() {
@@ -40,6 +40,7 @@ export function Settings() {
       <h3>Settings</h3>
       <section style={{ marginTop: 12 }}>
         <h5>Push Notifications</h5>
+        {loading && <div style={{ marginBottom: 8 }}>Loading push settings...</div>}
         <div style={{ marginBottom: 8 }}>Permission: <strong>{permission}</strong></div>
         <div style={{ marginBottom: 8 }}>Client subscription: {subscription ? <span>Present</span> : <span>None</span>}</div>
         <div style={{ marginBottom: 8 }}>Server saved subscription: {serverSub ? <span>Present (createdAt: {serverSub.createdAt ? new Date(serverSub.createdAt).toLocaleString() : 'unknown'})</span> : <span>None</span>}</div>

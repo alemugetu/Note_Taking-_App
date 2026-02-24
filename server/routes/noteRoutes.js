@@ -7,6 +7,7 @@ import {
   deleteNote,
   removeAttachment,
   getSharedNote,
+  restoreNote,
 } from '../controllers/noteController.js';
 import { protect } from '../middleware/auth.js';
 
@@ -26,6 +27,8 @@ router.route('/:id')
   .get(getNote)
   .put(updateNote)
   .delete(deleteNote);
+
+router.put('/:id/restore', restoreNote);
 
 router.route('/:id/attachments/:publicId')
   .delete(removeAttachment);

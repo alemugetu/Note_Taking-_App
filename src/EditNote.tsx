@@ -1,12 +1,10 @@
 import { NoteForm } from "./NoteForm"
 import type { NoteData, Tag } from "./App"
-import { Note } from "./Note"
-import { data } from "react-router-dom"
 import { useNote } from "./NoteLayout"
 
 type EditNoteProps = {
-    onSubmit: (id: string, data: NoteData) => void
-    onAddTag: (tag: Tag) => void
+    onSubmit: (id: string, data: NoteData) => Promise<void> | void
+    onAddTag: (tag: Tag) => Promise<Tag | undefined>
     availableTags: Tag[]
 }
 

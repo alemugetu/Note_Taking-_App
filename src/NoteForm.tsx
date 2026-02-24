@@ -175,7 +175,7 @@ export function NoteForm({ onSubmit, onAddTag, availableTags, title = "", conten
 
         const reminderPayload = reminderDate
             ? { date: (reminderDate + 'T' + (reminderTime || '00:00') + ':00.000Z'), notified: false }
-            : null
+            : undefined
 
         const normalizedAttachments = (attachmentsState || []).map((a: any) => ({
             url: a?.url,
@@ -220,7 +220,7 @@ export function NoteForm({ onSubmit, onAddTag, availableTags, title = "", conten
         
         try {
             setIsSaving(true)
-            const reminderPayload = reminderDate ? { date: (reminderDate + 'T' + (reminderTime || '00:00') + ':00.000Z'), notified: false } : null
+            const reminderPayload = reminderDate ? { date: (reminderDate + 'T' + (reminderTime || '00:00') + ':00.000Z'), notified: false } : undefined
             await onSubmit({
                 title: currentTitle,
                 content: currentContent,

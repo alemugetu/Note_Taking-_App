@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 
 export function Toasts({ toasts = [], onDismiss }: { toasts: any[]; onDismiss?: (id: string) => void }) {
   useEffect(() => {

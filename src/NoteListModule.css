@@ -1,24 +1,336 @@
-.card {
+.app-shell {
+    display: flex;
+    min-height: 100vh;
+    background-color: #f3f4f6;
+    color: #111827;
+}
+
+.app-sidebar {
+    width: 260px;
+    background-color: #ffffff;
+    border-right: 1px solid #e5e7eb;
+    padding: 16px;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.app-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 16px 24px;
+}
+
+.app-main-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.app-main-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.app-main-subtitle {
+    margin-left: 8px;
+    font-size: 0.9rem;
+    color: #6b7280;
+}
+
+.app-columns {
+    display: grid;
+    grid-template-columns: minmax(320px, 1.1fr) minmax(380px, 1.6fr);
+    gap: 16px;
+}
+
+.notes-list-column,
+.note-editor-column {
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    padding: 16px 18px;
+    overflow: visible;
+}
+
+.note-editor-column {
+    display: flex;
+    flex-direction: column;
+}
+
+.note-placeholder {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: #6b7280;
+}
+
+.app-sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.app-logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+}
+
+.app-logo-mark {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    font-size: 0.9rem;
+}
+
+.sidebar-toggle-btn {
+    border: none;
+    background: #e5e7eb;
+    border-radius: 50%;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.sidebar-toggle-btn:hover {
+    background: #d1d5db;
+}
+
+.sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.sidebar-nav-item {
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    padding: 8px 10px;
+    text-align: left;
+    font-size: 0.95rem;
+    color: #4b5563;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+.sidebar-nav-item:hover {
+    background-color: #e5e7eb;
+    transform: translateX(2px);
+}
+
+.sidebar-nav-item.active {
+    background-color: #dbeafe;
+    color: #1d4ed8;
+}
+
+.sidebar-section {
+    margin-top: 16px;
+}
+
+.sidebar-section-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #9ca3af;
+    margin-bottom: 8px;
+}
+
+.sidebar-notebooks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.sidebar-notebook-pill {
+    border: none;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background-color: #f3f4f6;
+    font-size: 0.8rem;
+    color: #4b5563;
+    cursor: pointer;
+    transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+.sidebar-notebook-pill:hover {
+    background-color: #e5e7eb;
+    transform: translateY(-1px);
+}
+
+.sidebar-footer {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.sidebar-dark-toggle {
+    border-radius: 999px;
+    border: 1px solid #e5e7eb;
+    padding: 6px 10px;
+    font-size: 0.85rem;
+    background: #f9fafb;
+    cursor: pointer;
+    text-align: left;
+}
+
+.sidebar-dark-toggle:hover {
+    background: #e5e7eb;
+}
+
+.sidebar-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.sidebar-user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #4f46e5, #3b82f6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.sidebar-user-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.sidebar-user-name {
+    font-size: 0.9rem;
+}
+
+.sidebar-logout {
+    border: none;
+    background: transparent;
+    padding: 0;
+    font-size: 0.8rem;
+    color: #ef4444;
+    cursor: pointer;
+}
+
+.sidebar-new-note {
+    box-shadow: 0 10px 20px rgba(37, 99, 235, 0.25);
+}
+
+.sidebar-collapsed .app-sidebar {
+    width: 72px;
+}
+
+.sidebar-collapsed .app-logo-text,
+.sidebar-collapsed .sidebar-section-title,
+.sidebar-collapsed .sidebar-notebook-pill,
+.sidebar-collapsed .sidebar-user-meta {
+    display: none;
+}
+
+.sidebar-collapsed .sidebar-nav-item span {
+    display: none;
+}
+
+.sidebar-collapsed .sidebar-nav-item::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background-color: #9ca3af;
+}
+
+.theme-dark {
+    background-color: #020617;
+    color: #e5e7eb;
+}
+
+.theme-dark .app-main {
+    background-color: transparent;
+}
+
+.theme-dark .app-sidebar,
+.theme-dark .notes-list-column,
+.theme-dark .note-editor-column {
+    background-color: #020617;
+    border-color: #111827;
+}
+
+.theme-dark .sidebar-nav-item {
+    color: #e5e7eb;
+}
+
+.theme-dark .sidebar-nav-item:hover {
+    background-color: #111827;
+}
+
+.theme-dark .sidebar-nav-item.active {
+    background-color: #1d283a;
+    color: #93c5fd;
+}
+
+.theme-dark .sidebar-notebook-pill {
+    background-color: #111827;
+    color: #e5e7eb;
+}
+
+.theme-dark .sidebar-dark-toggle {
+    background-color: #020617;
+    border-color: #111827;
+}
+
+.theme-dark .note-placeholder {
+    color: #9ca3af;
+}
+
+.note-card {
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     transition: box-shadow 0.3s ease;
-    padding: 16px;
     background-color: #fff;
     text-decoration: none;
     color: inherit;
-    display: block;
-    height: 100%;
     border: 1px solid #dee2e6;
+    width: 100%;
+    overflow: hidden;
 }
 
-.card:hover {
+.note-card:hover {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     text-decoration: none;
     color: inherit;
     transform: translateY(-2px);
 }
 
-.card:focus {
+.note-card:focus {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     outline: 2px solid #007bff;
     outline-offset: 2px;
@@ -26,22 +338,40 @@
     color: inherit;
 }
 
-.cardBody {
+.note-card-body {
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     height: 100%;
     gap: 0.5rem;
     padding: 1rem;
 }
 
-.cardTitle {
+.note-card-title {
     font-size: 1.25rem;
     font-weight: 500;
-    text-align: center;
+    text-align: left;
     margin-bottom: 0.5rem;
     color: #212529;
+}
+
+.note-card-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.note-preview-text {
+    font-size: 0.9rem;
+    color: #4b5563;
+    word-break: break-word;
+    overflow: hidden;
+    max-height: 4.8em;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
 }
 
 .tagContainer {
@@ -75,4 +405,49 @@
 
 .create-button {
     min-width: 100px;
+}
+
+/* Responsive layout adjustments */
+@media (max-width: 992px) {
+    .app-shell {
+        flex-direction: column;
+    }
+
+    .app-sidebar {
+        width: 100%;
+        position: static;
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .app-main {
+        padding: 12px 12px 16px;
+    }
+
+    .app-columns {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 576px) {
+    .app-main-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .notes-list-column,
+    .note-editor-column {
+        padding: 12px 12px;
+        border-radius: 8px;
+    }
+
+    .note-card-body {
+        align-items: flex-start;
+    }
+
+    .note-card-title {
+        text-align: left;
+    }
 }

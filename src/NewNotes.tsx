@@ -3,14 +3,13 @@ import type { NoteData, Tag } from "./App"
 import { useState } from "react"
 
 type NewNotesProps = {
-    onSubmit: (data: NoteData) => void
-    onAddTag: (tag: Tag) => void
+    onSubmit: (data: NoteData) => Promise<void> | void
+    onAddTag: (tag: Tag) => Promise<Tag | undefined>
     availableTags: Tag[]
     templates?: any[]
-    onSaveTemplate?: (data: NoteData) => void
 }
 
-export function NewNotes({ onSubmit, onAddTag, availableTags, templates = [], onSaveTemplate }: NewNotesProps){
+export function NewNotes({ onSubmit, onAddTag, availableTags, templates = [] }: NewNotesProps){
     const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
     const selectedTemplate = templates.find(t => t.id === selectedTemplateId)
 
@@ -32,7 +31,8 @@ export function NewNotes({ onSubmit, onAddTag, availableTags, templates = [], on
             </div>
         )}
         <NoteForm 
-        onSubmit={onSubmit} onAddTag={onAddTag} 
+        onSubmit={onSubmit}
+        onAddTag={onAddTag}
         availableTags={availableTags}
         title={selectedTemplate?.title}
         content={selectedTemplate?.content}

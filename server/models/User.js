@@ -45,6 +45,14 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    resetToken: {
+      type: String,
+      select: false,
+    },
+    resetTokenExpire: {
+      type: Date,
+      select: false,
+    },
   },
   {
     timestamps: true,
@@ -54,13 +62,13 @@ const userSchema = new mongoose.Schema(
 // NO PRE-SAVE HOOK - We'll hash password manually in controllers
 
 // Static method to hash password
-userSchema.statics.hashPassword = function(password) {
+userSchema.statics.hashPassword = function (password) {
   const salt = bcrypt.genSaltSync(10);
   return bcrypt.hashSync(password, salt);
 };
 
 // Method to compare passwords
-userSchema.methods.comparePassword = function(candidatePassword) {
+userSchema.methods.comparePassword = function (candidatePassword) {
   try {
     return bcrypt.compareSync(candidatePassword, this.password);
   } catch (error) {
@@ -70,7 +78,7 @@ userSchema.methods.comparePassword = function(candidatePassword) {
 };
 
 // Method to get public profile
-userSchema.methods.getPublicProfile = function() {
+userSchema.methods.getPublicProfile = function () {
   return {
     id: this._id,
     email: this.email,

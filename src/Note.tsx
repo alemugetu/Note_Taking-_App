@@ -28,8 +28,9 @@ type NoteProps = {
     notebooks?: any[]
     onMoveNote?: (noteId: string, notebookId: string | null) => void
     onUpdate?: (id: string, data: any) => void
+    onRestore?: (id: string) => void
 }
-export function Note({ onDelete, onPinToggle, onDuplicate, onSaveTemplate, notebooks = [], onMoveNote, onUpdate }: NoteProps) {
+export function Note({ onDelete, onPinToggle, onDuplicate, onSaveTemplate, notebooks = [], onMoveNote, onUpdate, onRestore }: NoteProps) {
     const note = useNote();
     const navigate = useNavigate();
     const [showAttachModal, setShowAttachModal] = useState(false)
@@ -108,17 +109,29 @@ export function Note({ onDelete, onPinToggle, onDuplicate, onSaveTemplate, noteb
                         {onMoveNote && (
                             <FormSelectMoveNotebook notebooks={notebooks} current={note.notebook} onMove={(nbId) => onMoveNote(note.id, nbId)} />
                         )}
-                        <Button
-                            variant="outline-danger"
-                            onClick={() => {
-                                if (window.confirm("Are you sure you want to delete this note?")) {
-                                    onDelete(note.id)
+                        {note.archived && onRestore ? (
+                            <Button
+                                variant="success"
+                                onClick={() => {
+                                    onRestore(note.id)
                                     navigate("/")
-                                }
-                            }}
-                        >
-                            Delete
-                        </Button>
+                                }}
+                            >
+                                Restore
+                            </Button>
+                        ) : (
+                            <Button
+                                variant="outline-danger"
+                                onClick={() => {
+                                    if (window.confirm("Are you sure you want to delete this note?")) {
+                                        onDelete(note.id)
+                                        navigate("/")
+                                    }
+                                }}
+                            >
+                                Delete
+                            </Button>
+                        )}
                         <Link to="/">
                             <Button variant="outline-secondary">Back</Button>
                         </Link>

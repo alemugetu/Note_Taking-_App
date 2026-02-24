@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { pushApi } from './api';
 
 function urlBase64ToUint8Array(base64String: string) {
@@ -15,7 +15,7 @@ function urlBase64ToUint8Array(base64String: string) {
 export function PushSettings() {
   const [permission, setPermission] = useState(Notification.permission);
   const [registered, setRegistered] = useState(false);
-  const [supported, setSupported] = useState(!!('serviceWorker' in navigator && 'PushManager' in window));
+  const [supported] = useState(!!('serviceWorker' in navigator && 'PushManager' in window));
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -56,7 +56,7 @@ export function PushSettings() {
       const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey });
       await pushApi.saveSubscription(sub);
       setRegistered(true);
-    } catch (err) {
+    } catch (err: any) {
       console.error('enablePush error', err);
       alert('Failed to enable push: ' + (err && err.message ? err.message : String(err)));
     } finally {

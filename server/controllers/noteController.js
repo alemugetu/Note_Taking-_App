@@ -6,9 +6,15 @@ import { cloudinary } from '../config/cloudinary.js'
 // @access  Private
 export const getNotes = async (req, res, next) => {
   try {
-    const { q, tags, color, notebook, dateFrom, dateTo, pinned, sort } = req.query;
+    const { q, tags, color, notebook, dateFrom, dateTo, pinned, sort, archived } = req.query;
 
     const query = { user: req.user._id };
+
+    if (archived === 'true') {
+      query.archived = true;
+    } else {
+      query.archived = false;
+    }
 
     if (q) {
       // use text search if available
@@ -179,28 +185,35 @@ export const deleteNote = async (req, res, next) => {
       });
     }
 
-    // Attempt to delete attachments from Cloudinary (best-effort)
-    try {
-      const deletes = (note.attachments || []).map(async (a) => {
-        const pub = a.publicId || a.public_id || a.publicid
-        if (!pub) return null
-        try {
-          return await cloudinary.uploader.destroy(pub, { resource_type: 'auto' })
-        } catch (err) {
-          console.warn('Failed to delete cloudinary asset', pub, err)
-          return null
-        }
-      })
-      await Promise.all(deletes)
-    } catch (err) {
-      console.warn('Attachment cleanup error', err)
-    }
-
-    await note.deleteOne();
+    note.archived = true;
+    await note.save();
 
     res.status(200).json({
       success: true,
-      data: {},
+      data: note,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const restoreNote = async (req, res, next) => {
+  try {
+    const note = await Note.findOne({ _id: req.params.id, user: req.user._id });
+
+    if (!note) {
+      return res.status(404).json({
+        success: false,
+        message: 'Note not found',
+      });
+    }
+
+    note.archived = false;
+    await note.save();
+
+    res.status(200).json({
+      success: true,
+      data: note,
     });
   } catch (error) {
     next(error);

@@ -98,7 +98,7 @@ export function LandingPage() {
             {/* Footer */}
             <footer className="bg-light py-4 border-top">
                 <Container className="text-center text-muted">
-                    <small>&copy; 2024 NoteApp. All rights reserved.</small>
+                    <small>&copy; 2026 NoteApp. All rights reserved.</small>
                 </Container>
             </footer>
         </div>

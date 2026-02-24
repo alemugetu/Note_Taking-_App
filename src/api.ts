@@ -29,6 +29,7 @@ export const notesApi = {
   create: (data: any) => api.post('/notes', data),
   update: (id: string, data: any) => api.put(`/notes/${id}`, data),
   delete: (id: string) => api.delete(`/notes/${id}`),
+  restore: (id: string) => api.put(`/notes/${id}/restore`),
   removeAttachment: (noteId: string, publicId: string) => api.delete(`/notes/${noteId}/attachments/${encodeURIComponent(publicId)}`),
   getShared: (id: string) => api.get(`/notes/shared/${id}`),
 };
@@ -66,6 +67,8 @@ export const authApi = {
   getProfile: () => api.get('/auth/profile'),
   updateProfile: (data: any) => api.put('/auth/profile', data),
   changePassword: (data: any) => api.put('/auth/change-password', data),
+  forgotPassword: (data: { email: string }) => api.post('/auth/forgot-password', data),
+  resetPassword: (token: string, data: { password: string }) => api.post(`/auth/reset-password/${token}`, data),
 };
 
 export const pushApi = {

@@ -1,8 +1,9 @@
 import type { JSX } from "react";
 import "bootstrap/dist/css/bootstrap.min.css"
-import { Routes, Route, Navigate, Link } from "react-router-dom";
+import { Routes, Route, Navigate, Link, useNavigate } from "react-router-dom";
 import { NewNotes } from "./NewNotes";
 import { NoteList } from "./NoteList";
+// import { Dashboard } from "./Dashboard";
 import { useState, useEffect } from "react";
 import { NoteLayout } from "./NoteLayout";
 import { Note } from "./Note";
@@ -19,7 +20,8 @@ import { Login } from './Login';
 import { Register } from './Register';
 import { LandingPage } from './LandingPage';
 import { SharedNote } from './SharedNote';
-import { Button } from "react-bootstrap"; // Added for logout button
+import { ForgotPassword } from './ForgotPassword';
+import { ResetPassword } from './ResetPassword';
 
 export type NoteType = {
   id: string
@@ -31,6 +33,7 @@ export type NoteData = {
   tags: Tag[]
   color?: string
   pinned?: boolean
+  archived?: boolean
   createdAt?: string
   updatedAt?: string
   attachments?: Array<{ url: string; publicId?: string; filename?: string; fileType?: string; size?: number }>
@@ -53,6 +56,17 @@ function MainApp() {
   const [loading, setLoading] = useState(true)
   const [notifications, setNotifications] = useState<any[]>([])
   const [toasts, setToasts] = useState<any[]>([])
+  const [darkMode, setDarkMode] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [viewSection, setViewSection] = useState<'all' | 'pinned' | 'favorites' | 'trash'>('all')
+  const [favoriteIds, setFavoriteIds] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem('favoriteNoteIds')
+      return raw ? JSON.parse(raw) : []
+    } catch {
+      return []
+    }
+  })
   const [templates, setTemplates] = useState<any[]>(() => {
     try {
       const raw = localStorage.getItem('note_templates')
@@ -66,7 +80,7 @@ function MainApp() {
     const fetchData = async () => {
       try {
         const [notesRes, tagsRes, notebooksRes] = await Promise.all([
-          notesApi.getAll(),
+          notesApi.getAll({ archived: false }),
           tagsApi.getAll(),
           notebooksApi.getAll()
         ])
@@ -86,6 +100,7 @@ function MainApp() {
           })),
           color: note.color || '#ffffff',
           pinned: note.pinned || false,
+          archived: note.archived || false,
           createdAt: note.createdAt,
           updatedAt: note.updatedAt,
           reminder: note.reminder || null,
@@ -157,6 +172,7 @@ function MainApp() {
         })),
         color: note.color || '#ffffff',
         pinned: note.pinned || false,
+        archived: note.archived || false,
         createdAt: note.createdAt,
         updatedAt: note.updatedAt,
         reminder: note.reminder || null,
@@ -198,16 +214,14 @@ function MainApp() {
           id: tag?._id || tag,
           label: tag?.name || "Unknown Tag"
         })),
-        color: createdNote.color || '#ffffff'
-        ,
-        pinned: createdNote.pinned || false
-        ,
+        color: createdNote.color || '#ffffff',
+        pinned: createdNote.pinned || false,
+        archived: createdNote.archived || false,
         attachments: (createdNote.attachments || []).map((a: any) => ({ url: a.url, publicId: a.publicId, filename: a.filename, fileType: a.fileType, size: a.size })),
         reminder: createdNote.reminder || null
       }
 
       setNotes(prev => [newNote, ...prev])
-      return newNote
     } catch (error) {
       console.error("Error creating note:", error)
     }
@@ -294,10 +308,21 @@ function MainApp() {
 
   async function onDeleteNote(id: string) {
     try {
-      await notesApi.delete(id)
-      setNotes(prev => prev.filter(note => note.id !== id))
+      const res = await notesApi.delete(id)
+      const updated = res.data.data
+      setNotes(prev => prev.map(note => note.id === id ? { ...note, archived: updated.archived } : note))
     } catch (error) {
       console.error("Error deleting note:", error)
+    }
+  }
+
+  async function onRestoreNote(id: string) {
+    try {
+      const res = await notesApi.restore(id)
+      const updated = res.data.data
+      setNotes(prev => prev.map(note => note.id === id ? { ...note, archived: updated.archived } : note))
+    } catch (error) {
+      console.error("Error restoring note:", error)
     }
   }
 
@@ -320,10 +345,9 @@ function MainApp() {
           id: tag?._id || tag,
           label: tag?.name || "Unknown Tag"
         })),
-        color: updatedNoteData.color || '#ffffff'
-        ,
-        pinned: updatedNoteData.pinned || false
-        ,
+        color: updatedNoteData.color || '#ffffff',
+        pinned: updatedNoteData.pinned || false,
+        archived: updatedNoteData.archived || false,
         attachments: (updatedNoteData.attachments || []).map((a: any) => ({ url: a.url, publicId: a.publicId, filename: a.filename, fileType: a.fileType, size: a.size })),
         reminder: updatedNoteData.reminder || null
       }
@@ -366,72 +390,227 @@ function MainApp() {
 
   const { logout, user } = useAuth(); // Hooks must be inside component
 
+  const navigate = useNavigate();
+
+  const visibleNotes = notes.filter(note => {
+    if (viewSection === 'trash') return note.archived;
+    if (viewSection === 'pinned') return !note.archived && note.pinned;
+    if (viewSection === 'favorites') return !note.archived && favoriteIds.includes(note.id);
+    return !note.archived;
+  });
+
+  function toggleFavorite(id: string) {
+    setFavoriteIds(prev => {
+      const exists = prev.includes(id)
+      const next = exists ? prev.filter(x => x !== id) : [...prev, id]
+      try { localStorage.setItem('favoriteNoteIds', JSON.stringify(next)) } catch { }
+      return next
+    })
+  }
+
+  function handleNavAll() {
+    setViewSection('all')
+    searchNotes({ archived: false })
+    navigate('/')
+  }
+
+  function handleNavPinned() {
+    setViewSection('pinned')
+    searchNotes({ archived: false })
+    navigate('/')
+  }
+
+  function handleNavFavorites() {
+    setViewSection('favorites')
+    searchNotes({ archived: false })
+    navigate('/')
+  }
+
+  function handleNavTrash() {
+    setViewSection('trash')
+    searchNotes({ archived: true })
+    navigate('/')
+  }
+
   if (loading) return <div>Loading...</div>
 
 
   return (
-    <div className="container my-4">
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span className="text-muted small">Hello, {user?.profile?.name || user?.email}</span>
-          <PushSettings />
-          <Link to="/settings" className="btn btn-outline-secondary btn-sm">Settings</Link>
-          <Notifications notifications={notifications} onMarkRead={async (id: string) => {
-            try {
-              await notificationsApi.markRead(id)
-              setNotifications(prev => prev.map((n: any) => n._id === id ? { ...n, read: true } : n))
-            } catch (err) {
-              // ignore
-            }
-          }} />
-          <Button variant="outline-danger" size="sm" onClick={logout}>Logout</Button>
+    <div className={`app-shell ${darkMode ? 'theme-dark' : 'theme-light'} ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+      <aside className="app-sidebar">
+        <div className="app-sidebar-header">
+          <div className="app-logo">
+            <span className="app-logo-mark">N</span>
+            {!sidebarCollapsed && <span className="app-logo-text">NoteApp</span>}
+          </div>
+          <button
+            className="sidebar-toggle-btn"
+            onClick={() => setSidebarCollapsed(s => !s)}
+            aria-label="Toggle sidebar"
+          >
+            {sidebarCollapsed ? "›" : "‹"}
+          </button>
         </div>
-      </div>
-      <Toasts toasts={toasts} onDismiss={(id: string) => setToasts(prev => prev.filter(t => t._id !== id))} />
-      <Routes>
-        <Route path="/" element={<NoteList availableTags={tags} notes={notes}
-          onUpdateTag={updateTag} onDeleteTag={deleteTag}
-          onPinToggle={onPinToggle} onDuplicate={onDuplicateNote}
-          notebooks={notebooks}
-          onCreateNotebook={createNotebook}
-          onUpdateNotebook={updateNotebook}
-          onDeleteNotebook={deleteNotebook}
-          onSearch={searchNotes}
-          onNoteUpdated={(id: string, updated: any) => setNotes(prev => prev.map(n => n.id === id ? { ...n, ...updated } : n))}
-        />} />
-        <Route path="/new" element={
-          <NewNotes
-            onSubmit={onCreateNote}
-            onAddTag={addTag}
-            availableTags={tags}
-            templates={templates}
-            onSaveTemplate={saveTemplate}
-          />
-        } />
 
-        <Route path="/:id" element={<NoteLayout notes=
-          {notes} />}>
-          <Route index element={<Note
-            onDelete={onDeleteNote}
-            onPinToggle={onPinToggle}
-            onDuplicate={onDuplicateNote}
-            onSaveTemplate={saveTemplate}
-            templates={templates}
-            notebooks={notebooks}
-            onMoveNote={moveNoteToNotebook}
-            onUpdate={onUpdateNote}
-          />} />
-          <Route path="edit" element={<EditNote
-            onSubmit={onUpdateNote}
-            onAddTag={addTag}
-            availableTags={tags}
-          />} />
-        </Route>
-        <Route path="/notifications" element={<NotificationCenter />} />
-        <Route path="/settings" element={<Settings />} />
+        <Link to="/new" className="btn btn-primary w-100 mb-3 sidebar-new-note">
+          + New Note
+        </Link>
 
-        <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
+        <nav className="sidebar-nav">
+          <button
+            className={`sidebar-nav-item ${viewSection === 'all' ? 'active' : ''}`}
+            onClick={handleNavAll}
+          >
+            <span>Dashboard</span>
+          </button>
+          <button
+            className={`sidebar-nav-item ${viewSection === 'all' ? 'active' : ''}`}
+            onClick={handleNavAll}
+          >
+            <span>All Notes</span>
+          </button>
+          <button
+            className={`sidebar-nav-item ${viewSection === 'pinned' ? 'active' : ''}`}
+            onClick={handleNavPinned}
+          >
+            <span>Pinned Notes</span>
+          </button>
+          <button
+            className={`sidebar-nav-item ${viewSection === 'favorites' ? 'active' : ''}`}
+            onClick={handleNavFavorites}
+          >
+            <span>Favorites</span>
+          </button>
+          <button
+            className={`sidebar-nav-item ${viewSection === 'trash' ? 'active' : ''}`}
+            onClick={handleNavTrash}
+          >
+            <span>Trash</span>
+          </button>
+        </nav>
+
+        <div className="sidebar-section">
+          {!sidebarCollapsed && <div className="sidebar-section-title">Notebooks</div>}
+          <div className="sidebar-notebooks">
+            <button className="sidebar-notebook-pill">Personal</button>
+            <button className="sidebar-notebook-pill">Work</button>
+            <button className="sidebar-notebook-pill">Study</button>
+          </div>
+        </div>
+
+        <div className="sidebar-footer">
+          <button
+            className="sidebar-dark-toggle"
+            onClick={() => setDarkMode(m => !m)}
+          >
+            {darkMode ? "Light mode" : "Dark mode"}
+          </button>
+          <div className="sidebar-user">
+            <div className="sidebar-user-avatar">
+              {(user?.profile?.name || user?.email || "?").slice(0, 1).toUpperCase()}
+            </div>
+            {!sidebarCollapsed && (
+              <div className="sidebar-user-meta">
+                <div className="sidebar-user-name">{user?.profile?.name || user?.email}</div>
+                <button className="sidebar-logout" onClick={logout}>Logout</button>
+              </div>
+            )}
+          </div>
+        </div>
+      </aside>
+
+      <main className="app-main">
+        <header className="app-main-header">
+          <div className="app-main-header-left">
+            <span className="app-main-title">Notes</span>
+            {viewSection !== 'all' && (
+              <span className="app-main-subtitle">
+                {viewSection === 'pinned' && "Pinned notes"}
+                {viewSection === 'favorites' && "Favorite notes"}
+                {viewSection === 'trash' && "Trash"}
+              </span>
+            )}
+          </div>
+          <div className="app-main-header-right">
+            <PushSettings />
+            <Link to="/settings" className="btn btn-outline-secondary btn-sm">Settings</Link>
+            <Notifications notifications={notifications} onMarkRead={async (id: string) => {
+              try {
+                await notificationsApi.markRead(id)
+                setNotifications(prev => prev.map((n: any) => n._id === id ? { ...n, read: true } : n))
+              } catch {
+              }
+            }} />
+          </div>
+        </header>
+
+        <Toasts toasts={toasts} onDismiss={(id: string) => setToasts(prev => prev.filter(t => t._id !== id))} />
+
+        <div className="app-columns">
+          <section className="notes-list-column">
+            <NoteList
+              availableTags={tags}
+              notes={visibleNotes}
+              onUpdateTag={updateTag}
+              onDeleteTag={deleteTag}
+              onPinToggle={onPinToggle}
+              onDuplicate={onDuplicateNote}
+              notebooks={notebooks}
+              onCreateNotebook={createNotebook}
+              onUpdateNotebook={updateNotebook}
+              onDeleteNotebook={deleteNotebook}
+              onSearch={searchNotes}
+              extraSearchParams={{ archived: viewSection === 'trash' ? true : false }}
+              favoriteIds={favoriteIds}
+              onToggleFavorite={toggleFavorite}
+            />
+          </section>
+
+          <section className="note-editor-column">
+            <Routes>
+              <Route path="/" element={
+                <div className="note-placeholder">
+                  <h3>Select a note</h3>
+                  <p className="text-muted">Choose a note from the list or create a new one.</p>
+                </div>
+              } />
+              <Route path="/new" element={
+                <NewNotes
+                  onSubmit={onCreateNote}
+                  onAddTag={addTag}
+                  availableTags={tags}
+                  templates={templates}
+                />
+              } />
+              <Route path="/:id" element={<NoteLayout notes={notes} />}>
+                <Route index element={
+                  <Note
+                    onDelete={onDeleteNote}
+                    onPinToggle={onPinToggle}
+                    onDuplicate={onDuplicateNote}
+                    onSaveTemplate={saveTemplate}
+                    templates={templates}
+                    notebooks={notebooks}
+                    onMoveNote={moveNoteToNotebook}
+                    onUpdate={onUpdateNote}
+                    onRestore={onRestoreNote}
+                  />
+                } />
+                <Route path="edit" element={
+                  <EditNote
+                    onSubmit={onUpdateNote}
+                    onAddTag={addTag}
+                    availableTags={tags}
+                  />
+                } />
+              </Route>
+              <Route path="/notifications" element={<NotificationCenter />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="*" element={<Navigate to="/" />} />
+            </Routes>
+          </section>
+        </div>
+      </main>
     </div>
   );
 }
@@ -447,6 +626,8 @@ function RoutesComp() {
       <Route path="/landing" element={<LandingPage />} />
       <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/" />} />
       <Route path="/register" element={!isAuthenticated ? <Register /> : <Navigate to="/" />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password/:token" element={<ResetPassword />} />
       <Route path="/note/shared/:id" element={<SharedNote />} />
 
       {/* App Routes - Catch all */}
