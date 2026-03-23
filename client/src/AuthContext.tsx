@@ -6,7 +6,7 @@ interface User {
     email: string;
     profile?: {
         name?: string;
-        avatar?: string;
+        avatar?: string; 
     };
     preferences?: {
         theme?: string;

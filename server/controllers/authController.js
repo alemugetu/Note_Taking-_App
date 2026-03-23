@@ -41,6 +41,15 @@ export const register = async (req, res, next) => {
 
     // Generate token
     const token = generateToken(user._id);
+    
+    // After generating token, send welcome email
+await sendMail(
+  user.email,
+  'Welcome to Note Taking App',
+  `Hi ${user.profile.name}, your account has been created successfully.`,
+  `<p>Hi <strong>${user.profile.name}</strong>, welcome to Note Taking App!</p>`
+);
+
 
     res.status(201).json({
       success: true,

@@ -1,10 +1,6 @@
 import nodemailer from 'nodemailer';
 
-let transporter = null;
-
 function getTransporter() {
-  if (transporter) return transporter;
-
   const host = process.env.SMTP_HOST;
   const port = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : undefined;
   const user = process.env.SMTP_USER;
@@ -15,17 +11,12 @@ function getTransporter() {
     return null;
   }
 
-  transporter = nodemailer.createTransport({
+  return nodemailer.createTransport({
     host,
     port,
     secure: port === 465,
-    auth: {
-      user,
-      pass
-    }
+    auth: { user, pass }
   });
-
-  return transporter;
 }
 
 export async function sendMail(to, subject, text, html) {

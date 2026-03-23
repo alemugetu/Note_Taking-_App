@@ -2,8 +2,8 @@ import { useState, type FormEvent } from 'react';
 import { Form, Button, Card, Container, Alert, Spinner } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
-import { authApi } from './api';
-
+import { authApi } from './api'; 
+ 
 
 export function Register() {
     const [name, setName] = useState('');
